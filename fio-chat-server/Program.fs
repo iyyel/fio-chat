@@ -5,33 +5,48 @@ open System.Collections.Generic
 open FIO.Core
 open FIO.Library.Network.WebSockets
 
-type Message =
-    | ConnectionRequest of Username: string
-    | ConnectionAcceptedResponse of ServerName: string * AcceptedUsername: string * Content: string
-    | ConnectionFailedResponse of ServerName: string * FailedUsername: string * Content: string
-    | BroadcastMessageRequest of SenderUsername: string * Content: string
-    | BroadcastMessageResponse of SenderUsername: string * Content: string
-    | PrivateMessageRequest of SenderUsername: string * ReceiverUsername: string * Content: string 
-    | PrivateMessageResponse of SenderUsername: string * Content: string
-    | PrivateMessageFailedResponse of ServerName: string * SenderUsername: string * ReceiverUsername: string * Content: string
-    | OnlineClientListRequest of SenderUsername: string
-    | OnlineClientListResponse of SenderUsername: string * ReceiverUsername: string * ClientList: string list
+type ChatMessage =
+    // Connection
+    | ConnectionRequest of RequestedUsername: string
+    | ConnectionAcceptedResponse of ServerName: string * AcceptedUsername: string * Message: string
+    | ConnectionFailedResponse of ServerName: string * FailedUsername: string * Message: string
+    | NewConnectionResponse of ServerName: string * NewUsername: string * Message: string
+
+    // Broadcast
+    | BroadcastMessageRequest of FromUsername: string * Message: string
+    | BroadcastMessageResponse of ServerName: string * FromUsername: string * Message: string
+
+    // Private
+    | PrivateMessageRequest of FromUsername: string * ToUsername: string * Message: string
+    | PrivateMessageResponse of ServerName: string * FromUsername: string * ToUsername: string * Message: string
+    | PrivateMessageFailedResponse of ServerName: string * FromUsername: string * ToUsername: string * Message: string
+
+    // Online clients
+    | OnlineClientsRequest of FromUsername: string
+    | OnlineClientsResponse of ServerName: string * ToUsername: string * Clients: string list
+
+    // Help
+    | HelpRequest of FromUsername: string
+    | HelpResponse of ServerName: string * ToUsername: string * Message: string
+
+    // Kick
+    | KickRequest of ServerName: string * ToUsername: string
 
 and Server =
     { Name: string
       EndPoint: string
-      Socket: ServerWebSocket<Message> }
+      Socket: ServerWebSocket<ChatMessage> }
 
-and FIOChatServerApp(serverUrl) =
+and FIOChatServerApp(serverUrl, serverName) =
     inherit FIOApp<unit, exn>()
 
-    let clients = Dictionary<string, WebSocket<Message>>()
+    let clients = Dictionary<string, WebSocket<ChatMessage>>()
 
-    let getFormattedDate() =
+    let formattedDate () =
         DateTime.Now.ToString("dd.MM.yy HH:mm:ss", CultureInfo.InvariantCulture)
 
     let printMessage username endpoint message =
-        printfn $"[%s{getFormattedDate()}] [%s{username} / %s{endpoint}]: %s{message}"
+        !+ printfn($"[%s{formattedDate()}] [%s{username} (%s{endpoint})]: %s{message}")
 
     let server serverUrl =
         let broadcastMessage message filteredUsername =
@@ -46,69 +61,70 @@ and FIOChatServerApp(serverUrl) =
                 |> Seq.map _.Value.Send(message)
                 |> Seq.fold (fun acc effect -> acc <!> effect) (!+ ())
 
-        let handleClient (clientSocket: WebSocket<Message>) server =
+        let handleClient (clientSocket: WebSocket<ChatMessage>) server =
             let printServerMessage = printMessage server.Name server.EndPoint
 
             let handleConnectionRequest username = fio {
                 let! clientEndpoint = !+ clientSocket.RequestUri.ToString()
-                do! !+ printServerMessage($"Received connection request for %s{username} from %s{clientEndpoint}.")
+                do! printServerMessage($"Received connection request for %s{username} from %s{clientEndpoint}.")
                 match clients.TryGetValue username with
                 | true, _ ->
-                    let! content = !+ $"%s{username} is already connected. Connection failed!"
-                    do! !+ printServerMessage(content)
-                    do! clientSocket.Send(ConnectionFailedResponse (server.Name, username, content))
+                    let! message = !+ $"%s{username} is already connected. Connection failed!"
+                    do! printServerMessage(message)
+                    do! clientSocket.Send(ConnectionFailedResponse (server.Name, username, message))
                 | false, _ ->
-                    let! serverContent = !+ $"%s{username} has connected from %s{clientEndpoint}."
-                    let! clientContent = !+ $"%s{username} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
+                    let! serverMessage = !+ $"%s{username} has connected from %s{clientEndpoint}."
+                    let! clientMessage = !+ $"%s{username} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
                     do! !+ clients.Add(username, clientSocket)
-                    do! clientSocket.Send(ConnectionAcceptedResponse (server.Name, username, clientContent))
-                    do! !+ printServerMessage(serverContent)
-                    do! broadcastMessage (BroadcastMessageResponse (server.Name, clientContent)) (Some username)
+                    do! clientSocket.Send(ConnectionAcceptedResponse (server.Name, username, clientMessage))
+                    do! printServerMessage(serverMessage)
+                    do! broadcastMessage (NewConnectionResponse (server.Name, username, clientMessage)) (Some username)
             }
 
-            let handlePrivateMessageRequest senderUsername receiverUsername content clientEndPoint = fio {
-                match clients.TryGetValue receiverUsername with
-                | true, receiverChannel ->
-                    let! receiverEndpoint = !+ receiverChannel.RequestUri.ToString()
-                    do! !+ (printMessage $"%s{senderUsername} -> %s{receiverUsername}" $"%s{clientEndPoint} -> %s{receiverEndpoint.ToString()}" content)
-                    do! receiverChannel.Send(PrivateMessageResponse (senderUsername, content))
+            let handlePrivateMessageRequest fromUsername toUsername message fromUrl = fio {
+                match clients.TryGetValue toUsername with
+                | true, toSocket ->
+                    let! toUrl = !+ toSocket.RequestUri.ToString()
+                    do! printMessage $"%s{fromUsername} -> %s{toUsername}" $"%s{fromUrl} -> %s{toUrl.ToString()}" message
+                    do! toSocket.Send(PrivateMessageResponse (server.Name, fromUsername, toUsername, message))
                 | false, _ ->
-                    match clients.TryGetValue senderUsername with
-                    | true, channel ->
-                        let! serverContent = !+ $"%s{senderUsername} failed to private message %s{receiverUsername} because %s{receiverUsername} is not connected."
-                        let! clientContent = !+ $"%s{receiverUsername} is not connected."
-                        do! !+ printServerMessage(serverContent)
-                        do! channel.Send(PrivateMessageFailedResponse (server.Name, senderUsername, receiverUsername, clientContent))
+                    match clients.TryGetValue fromUsername with
+                    | true, fromSocket ->
+                        let! serverMessage = !+ $"%s{fromUsername} failed to private message %s{toUsername} because %s{toUsername} is not connected."
+                        let! clientMessage = !+ $"%s{toUsername} is not connected."
+                        do! printServerMessage(serverMessage)
+                        do! fromSocket.Send(PrivateMessageFailedResponse (server.Name, fromUsername, toUsername, clientMessage))
                     | false, _ ->
-                        do! !+ printServerMessage($"Failed handling private message request from %s{senderUsername} to %s{receiverUsername}. Neither the sender or receiver is connected.")
+                        do! printServerMessage($"Failed handling private message request from %s{fromUsername} to %s{toUsername}. Neither the sender or receiver is connected.")
             }
 
-            let handleMessage message clientEndPoint = fio {
+            let handleMessage message clientUrl = fio {
                 match message with
-                | ConnectionRequest username ->
-                    do! handleConnectionRequest username
-                | ConnectionAcceptedResponse(serverName, username, content) ->
-                    do! !+ printServerMessage($"Received a ConnectionAcceptedResponse from %s{serverName} for %s{username} with content: %s{content}")
-                | ConnectionFailedResponse(serverName, username, content) ->
-                    do! !+ printServerMessage($"Received a ConnectionFailedResponse from %s{serverName} for %s{username} with content: %s{content}")
-                | BroadcastMessageRequest(senderUsername, content) ->
-                    do! !+ (printMessage senderUsername clientEndPoint content)
-                    do! broadcastMessage ((BroadcastMessageResponse (senderUsername, content))) (Some senderUsername)
-                | BroadcastMessageResponse(senderName, content) ->
-                    do! !+ printServerMessage($"Received a BroadcastMessageResponse from %s{senderName} with content: %s{content}")
-                | PrivateMessageRequest(senderUsername, receiverUsername, content) ->
-                    do! handlePrivateMessageRequest senderUsername receiverUsername content clientEndPoint
-                | PrivateMessageResponse (senderUsername, content) ->
-                    do! !+ printServerMessage($"Received a PrivateMessageResponse from %s{senderUsername} with content: %s{content}")
-                | PrivateMessageFailedResponse (serverName, senderUsername, receiverUsername, content) ->
-                    do! !+ printServerMessage($"Received a PrivateMessageFailedResponse from %s{serverName} for %s{senderUsername} to %s{receiverUsername} with content: %s{content}")
-                | OnlineClientListRequest senderUsername ->
+                | ConnectionRequest requestedUsername ->
+                    do! handleConnectionRequest requestedUsername
+                | ConnectionAcceptedResponse(serverName, acceptedUsername, message) ->
+                    do! printServerMessage($"Received a ConnectionAcceptedResponse with ServerName: %s{serverName}, AcceptedUsername: %s{acceptedUsername} and Message: %s{message}. Discarding.")
+                | ConnectionFailedResponse(serverName, failedUsername, message) ->
+                    do! printServerMessage($"Received a ConnectionFailedResponse with ServerName: %s{serverName}, FailedUsername: %s{failedUsername} and Message: %s{message}. Discarding.")
+                | NewConnectionResponse(serverName, newUsername, message) ->
+                    do! printServerMessage($"Received a NewConnectionResponse with ServerName: %s{serverName}, NewUsername: %s{newUsername} and Message: %s{message}. Discarding.")
+                | BroadcastMessageRequest(fromUsername, message) ->
+                    do! (printMessage fromUsername clientUrl message)
+                    do! broadcastMessage ((BroadcastMessageResponse (serverName, fromUsername, message))) (Some fromUsername)
+                | BroadcastMessageResponse(serverName, fromUsername, message) ->
+                    do! printServerMessage($"Received a BroadcastMessageResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername} and Message: %s{message}. Discarding.")
+                | PrivateMessageRequest(fromUsername, toUsername, message) ->
+                    do! handlePrivateMessageRequest fromUsername toUsername message clientUrl
+                | PrivateMessageResponse (serverName, fromUsername, toUsername, message) ->
+                    do! printServerMessage($"Received a PrivateMessageResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername}, ToUsername: %s{toUsername} and Message: %s{message}. Discarding.")
+                | PrivateMessageFailedResponse (serverName, fromUsername, toUsername, message) ->
+                    do! printServerMessage($"Received a PrivateMessageFailedResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername}, ToUsername: %s{toUsername} and Message: %s{message}. Discarding.")
+                | OnlineClientsRequest fromUsername ->
                     let clientList = clients.Keys |> List.ofSeq
-                    do! !+ printServerMessage($"Sent client list to %s{senderUsername}.")
-                    do! !+ printServerMessage($"""Currently connected clients: %s{String.Join(", ", clientList)}.""")
-                    do! clientSocket.Send(OnlineClientListResponse (server.Name, senderUsername, clientList))
-                | OnlineClientListResponse (serverName, senderUsername, clientList) ->
-                    do! !+ printServerMessage($"""Received a OnlineClientListResponse from %s{serverName} for %s{senderUsername} with content: %s{String.Join(", ", clientList)}""")
+                    do! printServerMessage($"""Sent online clients to %s{fromUsername}. Online clients: %s{String.Join(", ", clientList)}.""")
+                    do! clientSocket.Send(OnlineClientsResponse (server.Name, fromUsername, clientList))
+                | OnlineClientsResponse (serverName, toUsername, clientList) ->
+                    do! printServerMessage($"""Received a OnlineClientsResponse with ServerName: %s{serverName}, ToUsername: %s{toUsername}, and ClientList: %s{String.Join(", ", clientList)}. Discarding.""")
             }
 
             fio {
@@ -122,22 +138,22 @@ and FIOChatServerApp(serverUrl) =
                         match clients |> Seq.tryFind (fun pair -> pair.Value = clientSocket) with
                         | Some pair -> pair.Key
                         | _ -> "Unknown"
-                    let! serverContent = !+ $"%s{clientUsername} from %s{clientEndPoint} has disconnected. Error: %s{exn.Message}"
-                    let! clientContent = !+ $"%s{clientUsername} has disconnected."
+                    let! serverMessage = !+ $"%s{clientUsername} from %s{clientEndPoint} has disconnected. Error: %s{exn.Message}"
+                    let! clientMessage = !+ $"%s{clientUsername} has disconnected."
                     do! !+ (clients.Remove clientUsername |> ignore)
-                    do! !+ printServerMessage(serverContent)
-                    do! broadcastMessage ((BroadcastMessageResponse (server.Name, clientContent))) None
+                    do! printServerMessage(serverMessage)
+                    do! broadcastMessage ((BroadcastMessageResponse (server.Name, serverName, clientMessage))) None
                     do! clientSocket.Close()
             }
 
         fio {
-            let! server = !+ { Name = "FIOChat"; EndPoint = serverUrl; Socket = new ServerWebSocket<Message>() }
+            do! !+ Console.Clear();
+            let! server = !+ { Name = serverName; EndPoint = serverUrl; Socket = new ServerWebSocket<ChatMessage>() }
             do! server.Socket.Start <| serverUrl
-            do! !+ (printMessage server.Name server.EndPoint $"Server started on %s{server.EndPoint}. Listening for clients...")
+            do! printMessage server.Name server.EndPoint $"Server started on %s{server.EndPoint}. Listening for clients..."
             
             while true do
                 let! clientSocket = server.Socket.Accept()
-                do! !+ printfn($"Client connected from %s{clientSocket.RequestUri.ToString()}")
                 do! !! (handleClient clientSocket server)
         }
 
@@ -148,7 +164,7 @@ and FIOChatServerApp(serverUrl) =
 [<EntryPoint>]
 let main args =
     if args.Length = 0 then
-        eprintfn "No arguments were provided. Please provide server url!"
+        eprintfn "No arguments were provided. Please provide server url and server name!"
         exit 1
-    FIOChatServerApp(args.[0]).Run()
+    FIOChatServerApp(args.[0], args.[1]).Run()
     exit 0
