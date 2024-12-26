@@ -2,7 +2,7 @@
   "profiles": {
     "fio-chat-server": {
       "commandName": "Project",
-      "commandLineArgs": "5000"
+      "commandLineArgs": "http://localhost:8080/"
     }
   }
 }
