@@ -7,8 +7,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="Printing.fs" />
 		<Compile Include="Message.fs" />
+		<Compile Include="Printing.fs" />
 		<Compile Include="ChatServerApp.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
