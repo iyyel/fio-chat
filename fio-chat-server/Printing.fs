@@ -1,4 +1,4 @@
-﻿module ChatClient.Printing
+﻿module ChatServer.Printing
 
 open FIO.Core
 
@@ -7,20 +7,20 @@ open BlackFox.ColoredPrintf
 open System
 open System.Globalization
 
-let private formattedDate () =
-    DateTime.Now.ToString("dd.MM.yy HH:mm:ss", CultureInfo.InvariantCulture)
+let private formatDate (date: DateTime) =
+    date.ToString("dd.MM.yy HH:mm:ss", CultureInfo.InvariantCulture)
 
-let printServerMessage username url message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s] ($darkgreen[%s])]: $darkmagenta[%s]" (formattedDate()) username url message)
+let printServerMessage user url date message =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s] ($darkgreen[%s])]: $darkmagenta[%s]" (formatDate date) user url message)
 
-let printClientMessage username url message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s] ($darkgreen[%s])]: $gray[%s]" (formattedDate()) username url message)
+let printClientMessage user url date message =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url message)
 
-let printPrivateMessage username url message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s] ($darkgreen[%s])]: $gray[%s]" (formattedDate()) username url message)
+let printPrivateMessage user url date message =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url message)
     
-let printInputPrompt username =
-    !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkgreen[%s]]: " (formattedDate()) username)
+let printInputPrompt user =
+    !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: " (formatDate <| DateTime.Now) user)
 
 let clearInputPrompt () =
     !+ Console.Write("\r" + new string(' ', 100) + "\r")

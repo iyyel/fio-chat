@@ -1,4 +1,4 @@
-﻿module ChatClient.App
+﻿module ChatServer.App
 
 open Message
 open Printing
@@ -9,7 +9,23 @@ open FIO.Core
 open FIO.Library.Network.WebSockets
 open System.Collections.Generic
 
-type Server =
+open System.Collections.Immutable
+
+type CircularBuffer<'T>(capacity: int) =
+    let mutable queue = ImmutableQueue.Empty
+    let mutable count = 0
+
+    member this.Add(item: 'T) =
+        if count >= capacity then
+            queue <- queue.Dequeue()
+        else
+            count <- count + 1
+        queue <- queue.Enqueue(item)
+
+    member this.ToList() =
+        queue |> Seq.toList
+
+and Server =
     { Name: string
       Url: string
       Socket: ServerWebSocket<Message> }
@@ -18,13 +34,16 @@ and ChatServerApp(serverUrl, serverName) =
     inherit FIOApp<unit, string>()
 
     let clients = Dictionary<string, WebSocket<Message>>()
+    let bannedUsers = Dictionary<string, string>()
+    let broadcastMessageCache = CircularBuffer<Message>(100)
 
     let runServer serverUrl =
-        let broadcastMessage filteredUsername message =
-            match filteredUsername with
-            | Some filteredUsername -> 
+        let broadcastMessage filteredUser message =
+            broadcastMessageCache.Add message
+            match filteredUser with
+            | Some filteredUser -> 
                 clients
-                |> Seq.filter (fun pair -> pair.Key <> filteredUsername)
+                |> Seq.filter (fun pair -> pair.Key <> filteredUser)
                 |> Seq.map _.Value.Send(message)
                 |> Seq.fold (fun acc effect -> acc <!> effect) (!+  ())
             | None ->
@@ -32,101 +51,227 @@ and ChatServerApp(serverUrl, serverName) =
                 |> Seq.map _.Value.Send(message)
                 |> Seq.fold (fun acc effect -> acc <!> effect) (!+ ())
 
+        let onlineClients () =
+            serverName :: (clients.Keys |> List.ofSeq)
+
+        let handleKickCommand kickedUser message server = fio {
+            match clients.TryGetValue kickedUser with
+            | true, clientSocket ->
+                let! timestamp = !+ DateTime.Now
+                do! clientSocket.Send <| KickedResponse (server.Name, kickedUser, message, timestamp)
+                do! broadcastMessage (Some kickedUser) <| DisconnectionNotify (server.Name, kickedUser, $"%s{kickedUser} has been kicked from the server with message: %s{message}", timestamp)
+                do! !+ (clients.Remove kickedUser |> ignore)
+                do! clientSocket.Close()
+            | false, _ -> 
+                do! printServerMessage server.Name server.Url DateTime.Now $"Failed to kick %s{kickedUser}. User is not connected."
+        }
+
+        let handleBanCommand bannedUser message server = fio {
+            bannedUsers.Add (bannedUser, message)
+            let! timestamp = !+ DateTime.Now
+            let! bannedUserMessage = !+ $"You have been banned from the server with message: %s{message}"
+            let! clientMessage = !+ $"%s{bannedUser} has been banned from the server with message: %s{message}"
+            match clients.TryGetValue bannedUser with
+            | true, clientSocket ->
+                do! clientSocket.Send <| KickedResponse (server.Name, bannedUser, bannedUserMessage, timestamp)
+                do! broadcastMessage (Some bannedUser) <| DisconnectionNotify (server.Name, bannedUser, clientMessage, timestamp)
+                do! !+ (clients.Remove bannedUser |> ignore)
+                do! clientSocket.Close()
+            | false, _ -> 
+                do! printServerMessage server.Name server.Url timestamp clientMessage
+                do! broadcastMessage (Some bannedUser) <| ServerBroadcastMessageResponse (server.Name, clientMessage, timestamp)
+        }
+
+        let handleUnbanCommand bannedUser server = fio {
+            bannedUsers.Remove bannedUser
+            let! timestamp = !+ DateTime.Now
+            let! message = !+ $"%s{bannedUser} has been unbanned."
+            do! printServerMessage server.Name server.Url timestamp message
+            do! broadcastMessage (Some bannedUser) <| ServerBroadcastMessageResponse (server.Name, message, timestamp)
+        }
+
+        let handlePrivateMessageCommand toUser message server = fio {
+            match clients.TryGetValue toUser with
+            | true, clientSocket ->
+                do! clientSocket.Send <| PrivateMessageResponse (server.Name, server.Name, toUser, message, DateTime.Now)
+            | false, _ ->
+                do! printServerMessage server.Name server.Url DateTime.Now $"Failed to send private message to %s{toUser}. User is not connected."
+        }
+
+        let handleMessageCommand message server = fio {
+            let! timestamp = !+ DateTime.Now
+            do! printServerMessage server.Name server.Url timestamp message
+            do! broadcastMessage None <| ServerBroadcastMessageResponse (server.Name, message, timestamp)
+        }
+
+        let handleCommands server = fio {
+            let printServerMessage = printServerMessage server.Name server.Url
+            while true do
+                try
+                    do! printInputPrompt(server.Name)
+                    match Console.ReadLine() with
+                    | input when input.Trim().Length = 0 ->
+                        return ()
+                    | input when input.Trim().StartsWith("\kick@") ->
+                        let! parts = !+ (input.Trim().Split("@")[1])
+                        let! info = !+ (parts.Split(":"))
+                        let! kickedUser = !+ (info.[0].Trim())
+                        let! message = !+ (info.[1].Trim())
+                        do! handleKickCommand kickedUser message server
+                    | input when input.Trim().StartsWith("\\ban@") ->
+                        let! parts = !+ (input.Trim().Split("@")[1])
+                        let! info = !+ (parts.Split(":"))
+                        let! bannedUser = !+ (info.[0].Trim())
+                        let! message = !+ (info.[1].Trim())
+                        do! handleBanCommand bannedUser message server
+                    | input when input.Trim().StartsWith("\unban@") ->
+                        let! unbannedUser = !+ (input.Trim().Split("@")[1])
+                        do! handleUnbanCommand unbannedUser server
+                    | input when input.Trim().StartsWith("\\banned") ->
+                        let banned = bannedUsers |> Seq.map (fun pair -> $"%s{pair.Key} - %s{pair.Value}")
+                        do! printServerMessage DateTime.Now $"""Banned users: %s{String.Join(", ", banned)}."""
+                    | input when input.Trim().StartsWith("\pm@") ->
+                        let! parts = !+ (input.Trim().Split("@")[1])
+                        let! info = !+ (parts.Split(":"))
+                        let! toUser = !+ (info.[0].Trim())
+                        let! message = !+ (info.[1].Trim())
+                        do! handlePrivateMessageCommand toUser message server
+                    | input when input.Trim().StartsWith("\online") ->
+                        do! printServerMessage DateTime.Now $"""Online: %s{String.Join(", ", onlineClients())}."""
+                    | input when input.Trim().StartsWith("\msg:") ->
+                        let! message = !+ (input.Trim().Split(":")[1]).Trim()
+                        do! handleMessageCommand message server
+                    | input when input.Trim().StartsWith("\commands") ->
+                        do! printServerMessage DateTime.Now ($"\nCommands: \n" +
+                            $"- To kick a user, type: \kick@<user>:<message>\n" +
+                            $"- To ban a user, type: \ban@<user>:<message>\n" +
+                            $"- To unban a user, type: \unban@<user>\n" +
+                            $"- To see banned users, type: \\banned\n" +
+                            $"- To send a private message, type: \pm@<user>:<message>\n" +
+                            $"- To see online clients, type: \online\n" +
+                            $"- To broadcast a message, type: \msg:<message>\n" +
+                            $"- To see this help message, type: \commands")
+                    | _ ->
+                        do! printServerMessage DateTime.Now $"Invalid command. Type \commands for a list of commands."
+                with exn ->
+                    do! printServerMessage DateTime.Now $"Failed to execute command. Error: %s{exn.Message}"
+                    return ()
+        }
+
         let handleClient (clientSocket: WebSocket<Message>) server =
             let printServerMessage = printServerMessage server.Name server.Url
 
-            let handleConnectionRequest username = fio {
+            let handleConnectionRequest user = fio {
                 let! clientUrl = !+ clientSocket.RequestUri.ToString()
-                do! printServerMessage $"Received connection request from %s{username} (%s{clientUrl})."
-                match clients.TryGetValue username with
-                | true, _ ->
-                    let! serverMessage = !+ $"%s{username} (%s{clientUrl}) is already connected!"
-                    let! clientMessage = !+ $"%s{username} is already connected!"
-                    do! printServerMessage(serverMessage)
-                    do! clientSocket.Send <| ConnectionFailedResponse (server.Name, username, clientMessage)
-                | false, _ ->
-                    let! serverMessage = !+ $"%s{username} (%s{clientUrl}) has connected."
-                    let! clientMessage = !+ $"%s{username} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
-                    do! !+ clients.Add(username, clientSocket)
-                    do! clientSocket.Send <| ConnectionAcceptedResponse (server.Name, username, clientMessage)
-                    do! printServerMessage(serverMessage)
-                    do! broadcastMessage (Some username) <| ConnectionNotify (server.Name, username, clientMessage)
+                do! printServerMessage DateTime.Now $"Received connection request from %s{user} (%s{clientUrl})."
+
+                if user = server.Name then
+                    printServerMessage DateTime.Now $"%s{user} (%s{clientUrl}) is trying to connect to itself. Connection denied."
+                    do! clientSocket.Close()
+                elif bannedUsers.ContainsKey user then
+                    printServerMessage DateTime.Now $"%s{user} (%s{clientUrl}) is banned. Connection denied."
+                    do! clientSocket.Close()
+                else
+                    match clients.TryGetValue user with
+                    | true, _ ->
+                        let! serverMessage = !+ $"%s{user} (%s{clientUrl}) is already connected!"
+                        let! clientMessage = !+ $"%s{user} is already online!"
+                        let! timestamp = !+ DateTime.Now
+                        do! printServerMessage timestamp serverMessage
+                        do! clientSocket.Send <| ConnectionFailedResponse (server.Name, user, clientMessage, timestamp)
+                    | false, _ ->
+                        let! serverMessage = !+ $"%s{user} (%s{clientUrl}) has connected."
+                        let! clientMessage = !+ $"%s{user} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
+                        broadcastMessageCache.ToList() |> List.map (fun message -> clientSocket.Send(message))
+                        do! !+ clients.Add(user, clientSocket)
+                        let! timestamp = !+ DateTime.Now
+                        do! clientSocket.Send <| ConnectionAcceptedResponse (server.Name, user, clientMessage, timestamp)
+                        do! printServerMessage timestamp serverMessage
+                        do! broadcastMessage (Some user) <| ConnectionNotify (server.Name, user, clientMessage, timestamp)
             }
 
             let handleDisconnect clientUrl = fio {
-                let clientUsername = 
+                let clientUser = 
                     match clients |> Seq.tryFind (fun pair -> pair.Value = clientSocket) with
                     | Some pair -> Some pair.Key
                     | _ -> None
-                match clientUsername with
-                | Some clientUsername ->
-                    let! serverMessage = !+ $"%s{clientUsername} from %s{clientUrl} has disconnected."
-                    let! clientMessage = !+ $"%s{clientUsername} has disconnected."
-                    do! !+ (clients.Remove clientUsername |> ignore)
-                    do! printServerMessage serverMessage
-                    do! broadcastMessage None <| (DisconnectionNotify (server.Name, serverName, clientMessage))
+                match clientUser with
+                | Some clientUser ->
+                    let! serverMessage = !+ $"%s{clientUser} from %s{clientUrl} has disconnected."
+                    let! clientMessage = !+ $"%s{clientUser} has left the chat. See you soon! 👋"
+                    do! !+ (clients.Remove clientUser |> ignore)
+                    let! timestamp = !+ DateTime.Now
+                    do! printServerMessage timestamp serverMessage
+                    do! broadcastMessage None <| (DisconnectionNotify (server.Name, serverName, clientMessage, timestamp))
                     do! clientSocket.Close()
-                | None -> 
-                    let! serverMessage = !+ $"Duplicated connection attempt (%s{clientUrl}) has disconnected."
-                    do! printServerMessage serverMessage
+                | None ->
+                    do! printServerMessage DateTime.Now $"Bad connection attempt from %s{clientUrl}. Client has been disconnected."
                     do! clientSocket.Close()
             }
 
-            let handlePrivateMessageRequest fromUsername toUsername message fromUrl = fio {
-                match clients.TryGetValue toUsername with
+            let handlePrivateMessageRequest fromUser toUser message fromUrl = fio {
+                match clients.TryGetValue toUser with
                 | true, toSocket ->
                     let! toUrl = !+ toSocket.RequestUri.ToString()
-                    do! printPrivateMessage $"%s{fromUsername} -> %s{toUsername}" $"%s{fromUrl} -> %s{toUrl.ToString()}" message
-                    do! toSocket.Send <| PrivateMessageResponse (server.Name, fromUsername, toUsername, message)
+                    let! timestamp = !+ DateTime.Now
+                    do! printPrivateMessage $"%s{fromUser} -> %s{toUser}" $"%s{fromUrl} -> %s{toUrl.ToString()}" timestamp message
+                    do! toSocket.Send <| PrivateMessageResponse (server.Name, fromUser, toUser, message, timestamp)
                 | false, _ ->
-                    match clients.TryGetValue fromUsername with
+                    match clients.TryGetValue fromUser with
                     | true, fromSocket ->
-                        let! serverMessage = !+ $"%s{fromUsername} failed to private message %s{toUsername} because %s{toUsername} is not connected."
-                        let! clientMessage = !+ $"%s{toUsername} is not connected."
-                        do! printServerMessage serverMessage
-                        do! fromSocket.Send <| PrivateMessageFailedResponse (server.Name, fromUsername, toUsername, clientMessage)
+                        let! serverMessage = !+ $"%s{fromUser} failed to private message %s{toUser} because %s{toUser} is not connected."
+                        let! clientMessage = !+ $"%s{toUser} is not online."
+                        let! timestamp = !+ DateTime.Now
+                        do! printServerMessage timestamp serverMessage
+                        do! fromSocket.Send <| PrivateMessageFailedResponse (server.Name, fromUser, toUser, clientMessage, timestamp)
                     | false, _ ->
-                        do! printServerMessage $"Failed handling private message request from %s{fromUsername} to %s{toUsername}. Neither the sender or receiver is connected."
+                        do! printServerMessage DateTime.Now $"Failed handling private message request from %s{fromUser} to %s{toUser}. Neither the sender or receiver is connected."
             }
 
             let handleMessage message clientUrl = fio {
+                let printServerMessage = printServerMessage DateTime.Now
                 match message with
-                | ConnectionRequest requestedUsername ->
-                    do! handleConnectionRequest requestedUsername
-                | ConnectionAcceptedResponse(serverName, acceptedUsername, message) ->
-                    do! printServerMessage $"Received a ConnectionAcceptedResponse with ServerName: %s{serverName}, AcceptedUsername: %s{acceptedUsername} and Message: %s{message}. Discarding."
-                | ConnectionFailedResponse(serverName, failedUsername, message) ->
-                    do! printServerMessage $"Received a ConnectionFailedResponse with ServerName: %s{serverName}, FailedUsername: %s{failedUsername} and Message: %s{message}. Discarding."
-                | ConnectionNotify(serverName, newUsername, message) ->
-                    do! printServerMessage $"Received a NewConnectionResponse with ServerName: %s{serverName}, NewUsername: %s{newUsername} and Message: %s{message}. Discarding."
-                | DisconnectionNotify(serverName, disconnectedUsername, message) ->
-                    do! printServerMessage $"Received a DisconnectionNotify with ServerName: %s{serverName}, DisconnectedUsername: %s{disconnectedUsername} and Message: %s{message}. Discarding."
-                | BroadcastMessageRequest(fromUsername, message) ->
-                    do! printClientMessage fromUsername clientUrl message
-                    do! broadcastMessage (Some fromUsername) <| (BroadcastMessageResponse (serverName, fromUsername, message))
-                | BroadcastMessageResponse(serverName, fromUsername, message) ->
-                    do! printServerMessage $"Received a BroadcastMessageResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername} and Message: %s{message}. Discarding."
-                | PrivateMessageRequest(fromUsername, toUsername, message) ->
-                    do! handlePrivateMessageRequest fromUsername toUsername message clientUrl
-                | PrivateMessageResponse(serverName, fromUsername, toUsername, message) ->
-                    do! printServerMessage $"Received a PrivateMessageResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername}, ToUsername: %s{toUsername} and Message: %s{message}. Discarding."
-                | PrivateMessageFailedResponse(serverName, fromUsername, toUsername, message) ->
-                    do! printServerMessage $"Received a PrivateMessageFailedResponse with ServerName: %s{serverName}, FromUsername: %s{fromUsername}, ToUsername: %s{toUsername} and Message: %s{message}. Discarding."
-                | OnlineClientsRequest fromUsername ->
-                    let clientList = clients.Keys |> List.ofSeq
-                    do! printServerMessage $"""Sent online clients to %s{fromUsername}. Online: %s{String.Join(", ", clientList)}."""
-                    do! clientSocket.Send <| OnlineClientsResponse (server.Name, fromUsername, clientList)
-                | OnlineClientsResponse(serverName, toUsername, clientList) ->
-                    do! printServerMessage $"""Received a OnlineClientsResponse with ServerName: %s{serverName}, ToUsername: %s{toUsername}, and ClientList: %s{String.Join(", ", clientList)}. Discarding."""
-                | HelpRequest fromUsername ->
+                | ConnectionRequest(user, _) ->
+                    do! handleConnectionRequest user
+                | ConnectionAcceptedResponse(server, user, message, timestamp) ->
+                    do! printServerMessage $"Received a ConnectionAcceptedResponse with Server: %s{server}, User: %s{user}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | ConnectionFailedResponse(server, user, message, timestamp) ->
+                    do! printServerMessage $"Received a ConnectionFailedResponse with Server: %s{server}, User: %s{user}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | ConnectionNotify(server, user, message, timestamp) ->
+                    do! printServerMessage $"Received a ConnectionNotify with Server: %s{server}, User: %s{user}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | DisconnectionNotify(server, user, message, timestamp) ->
+                    do! printServerMessage $"Received a DisconnectionNotify with Server: %s{server}, User: %s{user}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | BroadcastMessageRequest(fromUser, message, _) ->
+                    let! timestamp = !+ DateTime.Now
+                    do! printClientMessage fromUser clientUrl timestamp message
+                    do! broadcastMessage (Some fromUser) <| (BroadcastMessageResponse (serverName, fromUser, message, timestamp))
+                | BroadcastMessageResponse(server, fromUser, message, timestamp) ->
+                    do! printServerMessage $"Received a BroadcastMessageResponse with Server: %s{server}, FromUser: %s{fromUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | ServerBroadcastMessageResponse(server, message, timestamp) ->
+                    do! printServerMessage $"Received a ServerBroadcastMessageResponse with Server: %s{server}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | PrivateMessageRequest(fromUser, toUser, message, _) ->
+                    do! handlePrivateMessageRequest fromUser toUser message clientUrl
+                | PrivateMessageResponse(server, fromUser, toUser, message, timestamp) ->
+                    do! printServerMessage $"Received a PrivateMessageResponse with Server: %s{server}, FromUser: %s{fromUser}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | PrivateMessageFailedResponse(server, fromUser, toUser, message, timestamp) ->
+                    do! printServerMessage $"Received a PrivateMessageFailedResponse with Server: %s{server}, FromUser: %s{fromUser}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | OnlineClientsRequest (fromUser, _) ->
+                    let clientList = server.Name :: (clients.Keys |> List.ofSeq)
+                    do! printServerMessage $"""Sent online clients to %s{fromUser}. Online: %s{String.Join(", ", clientList)}."""
+                    do! clientSocket.Send <| OnlineClientsResponse (server.Name, fromUser, clientList, DateTime.Now)
+                | OnlineClientsResponse(server, toUser, clientList, timestamp) ->
+                    do! printServerMessage $"""Received a OnlineClientsResponse with Server: %s{server}, ToUser: %s{toUser}, ClientList: %s{String.Join(", ", clientList)} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."""
+                | HelpRequest (fromUser, _) ->
                     let! helpMessage = !+ ($"\nHelp: \n" +
-                        $"- To send a private message, type: \pm@<username>:<message>\n" +
+                        $"- To send a private message, type: \pm@<user>:<message>\n" +
                         $"- To see online clients, type: \online\n" +
                         $"- To see this help message, type: \help")
-                    do! printServerMessage($"Sent help message to %s{fromUsername}.")
-                    do! clientSocket.Send <| HelpResponse (server.Name, fromUsername, helpMessage)
-                | HelpResponse(serverName, toUsername, message) ->
-                    do! printServerMessage $"Received a HelpResponse with ServerName: %s{serverName}, ToUsername: %s{toUsername} and Message: %s{message}. Discarding."
+                    do! printServerMessage($"Sent help message to %s{fromUser}.")
+                    do! clientSocket.Send <| HelpResponse (server.Name, fromUser, helpMessage, DateTime.Now)
+                | HelpResponse(server, toUser, message, timestamp) ->
+                    do! printServerMessage $"Received a HelpResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | KickedResponse(server, toUser, message, timestamp) ->
+                    do! printServerMessage $"Received a KickedResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
             }
 
             fio {
@@ -134,20 +279,25 @@ and ChatServerApp(serverUrl, serverName) =
                 try
                     while true do
                         let! message = clientSocket.Receive()
+                        do! clearInputPrompt()
                         do! handleMessage message clientUrl
+                        do! printInputPrompt server.Name
                 with _ ->
                     do! handleDisconnect clientUrl
             }
+
+        let handleClients server = fio {
+            while true do
+                let! clientSocket = server.Socket.Accept()
+                do! !! (handleClient clientSocket server)
+        }
 
         fio {
             do! clearConsole()
             let! server = !+ { Name = serverName; Url = serverUrl; Socket = new ServerWebSocket<Message>() }
             do! server.Socket.Start <| serverUrl
-            do! printServerMessage server.Name server.Url $"Server started on %s{server.Url}. Listening for clients..."
-            
-            while true do
-                let! clientSocket = server.Socket.Accept()
-                do! !! (handleClient clientSocket server)
+            do! printServerMessage server.Name server.Url DateTime.Now $"Server started on %s{server.Url}. Listening for clients..."
+            do! handleClients server <!> handleCommands server
         }
 
     override this.effect = fio {

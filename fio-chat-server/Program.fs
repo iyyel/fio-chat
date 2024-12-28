@@ -1,4 +1,4 @@
-﻿open ChatClient.App
+﻿open ChatServer.App
 
 [<EntryPoint>]
 let main args =
