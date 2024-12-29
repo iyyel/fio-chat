@@ -1,7 +1,7 @@
-﻿module FIOChat.Client.Console
+﻿namespace FIOChat.Client.Console
 
 open FIOChat.Shared.Message
-open FIOChat.Shared.Printing.Client
+open FIOChat.Client.Console.Printing
 
 open System
 

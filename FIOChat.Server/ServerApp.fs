@@ -1,7 +1,7 @@
-﻿module FIOChat.ServerApp
+﻿namespace FIOChat.Server
 
 open FIOChat.Shared.Message
-open FIOChat.Shared.Printing.Server
+open FIOChat.Server.Printing
 
 open System
 

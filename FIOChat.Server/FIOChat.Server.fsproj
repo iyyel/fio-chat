@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Include="Printing.fs" />
 		<Compile Include="ServerApp.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>

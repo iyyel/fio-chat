@@ -7,7 +7,6 @@
 
 	<ItemGroup>
 		<Compile Include="Message.fs" />
-		<Compile Include="Printing.fs" />
 	</ItemGroup>
 
 	<ItemGroup>

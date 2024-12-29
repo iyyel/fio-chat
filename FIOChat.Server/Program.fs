@@ -1,4 +1,4 @@
-﻿open FIOChat.ServerApp
+﻿open FIOChat.Server
 
 [<EntryPoint>]
 let main args =
