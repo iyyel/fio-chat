@@ -1,4 +1,4 @@
-﻿open FIO.Chat.Console.Client.App
+﻿open FIOChat.Client.Console
 
 [<EntryPoint>]
 let main args =

@@ -458,3 +458,5 @@ Scripts/
 ### CUSTOM ###
 .ionide
 .config
+/Web.Client/Program.fs.js
+/Web.Client/Core.fs.js

@@ -1,4 +1,4 @@
-﻿module FIO.Chat.Shared.Printing
+﻿module FIOChat.Shared.Printing
 
 open FIO.Core
 

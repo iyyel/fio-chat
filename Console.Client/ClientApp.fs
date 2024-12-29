@@ -1,7 +1,7 @@
-﻿module FIO.Chat.Console.Client.App
+﻿module FIOChat.Client.Console
 
-open FIO.Chat.Shared.Message
-open FIO.Chat.Shared.Printing.Client
+open FIOChat.Shared.Message
+open FIOChat.Shared.Printing.Client
 
 open System
 

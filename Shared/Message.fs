@@ -1,4 +1,4 @@
-﻿module FIO.Chat.Shared.Message
+﻿module FIOChat.Shared.Message
 
 open System
 
