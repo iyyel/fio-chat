@@ -1,7 +1,7 @@
-﻿module ChatServer.App
+﻿module FIO.Chat.Server.App
 
-open Message
-open Printing
+open FIO.Chat.Shared.Message
+open FIO.Chat.Shared.Printing.Server
 
 open System
 
@@ -30,7 +30,7 @@ and Server =
       EndPoint: string
       Socket: ServerWebSocket<Message> }
 
-and ChatServerApp(serverUrl, serverName) =
+and ServerApp(serverUrl, serverName) =
     inherit FIOApp<unit, string>()
 
     let clients = Dictionary<string, WebSocket<Message>>()

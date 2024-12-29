@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Server", "fio-chat-server\Server.fsproj", "{149D842C-8F1B-47CB-9FC1-DE26ADEE498F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Console.Client", "fio-chat-client\Console.Client.fsproj", "{BD01B754-B248-4945-BE69-C3DD7F783203}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Shared", "Shared\Shared.fsproj", "{20969287-41DD-43CE-8545-AB18119A3CDF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{149D842C-8F1B-47CB-9FC1-DE26ADEE498F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{149D842C-8F1B-47CB-9FC1-DE26ADEE498F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{149D842C-8F1B-47CB-9FC1-DE26ADEE498F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{149D842C-8F1B-47CB-9FC1-DE26ADEE498F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD01B754-B248-4945-BE69-C3DD7F783203}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD01B754-B248-4945-BE69-C3DD7F783203}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD01B754-B248-4945-BE69-C3DD7F783203}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD01B754-B248-4945-BE69-C3DD7F783203}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20969287-41DD-43CE-8545-AB18119A3CDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20969287-41DD-43CE-8545-AB18119A3CDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20969287-41DD-43CE-8545-AB18119A3CDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20969287-41DD-43CE-8545-AB18119A3CDF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

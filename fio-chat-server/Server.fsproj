@@ -7,15 +7,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="Message.fs" />
-		<Compile Include="Printing.fs" />
-		<Compile Include="ChatServerApp.fs" />
+		<Compile Include="ServerApp.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
 		<PackageReference Include="FIO" Version="0.0.8-alpha" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Shared\Shared.fsproj" />
 	</ItemGroup>
 
 </Project>

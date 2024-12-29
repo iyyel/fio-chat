@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Message.fs" />
+    <Compile Include="Printing.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
+    <PackageReference Include="FIO" Version="0.0.8-alpha" />
+  </ItemGroup>
+
+</Project>

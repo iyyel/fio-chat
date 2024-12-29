@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "fio-chat-client": {
+      "commandName": "Project",
+      "commandLineArgs": "ws://localhost:8080/ iyyel"
+    }
+  }
+}
