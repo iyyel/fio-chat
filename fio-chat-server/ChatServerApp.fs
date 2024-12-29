@@ -162,7 +162,7 @@ and ChatServerApp(serverUrl, serverName) =
             let printServerMessage = printServerMessage server.Name server.EndPoint
 
             let handleConnectionRequest user = fio {
-                let! clientEndPoint = !+ clientSocket.RemoteEndPoint()
+                let! clientEndPoint = clientSocket.RemoteEndPoint()
                 let! clientEndPointString = !+ clientEndPoint.ToString()
                 do! printServerMessage DateTime.Now $"Received connection request from %s{user} (%s{clientEndPointString})."
 
@@ -276,7 +276,7 @@ and ChatServerApp(serverUrl, serverName) =
             }
 
             fio {
-                let! clientEndPoint = !+ clientSocket.RemoteEndPoint()
+                let! clientEndPoint = clientSocket.RemoteEndPoint()
                 try
                     while true do
                         let! message = clientSocket.Receive()
