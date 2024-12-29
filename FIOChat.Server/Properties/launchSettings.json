@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "fio-chat-server": {
+      "commandName": "Project",
+      "commandLineArgs": "http://localhost:8080/ FIOChat"
+    }
+  }
+}
