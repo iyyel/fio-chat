@@ -15,7 +15,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FIO" Version="0.0.6-alpha" />
+		<PackageReference Include="FIO" Version="0.0.8-alpha" />
 	</ItemGroup>
 
 </Project>
