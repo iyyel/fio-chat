@@ -1,4 +1,4 @@
-﻿module FIOChat.Client.Console.Printing
+﻿module FIOChat.Client.Terminal.Printing
 
 open FIO.Core
 

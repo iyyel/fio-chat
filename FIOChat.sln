@@ -7,9 +7,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Shared", "FIOChat.S
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Server", "FIOChat.Server\FIOChat.Server.fsproj", "{8600B7B8-501B-44C5-BD85-7D7FCF664725}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client.Console", "FIOChat.Client.Console\FIOChat.Client.Console.fsproj", "{232D730A-D0B1-43E5-9D68-B553488F2D04}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client.Terminal", "FIOChat.Client.Console\FIOChat.Client.Terminal.fsproj", "{232D730A-D0B1-43E5-9D68-B553488F2D04}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client.Web", "FIOChat.Client.Web\FIOChat.Client.Web.fsproj", "{279196A5-2E09-419D-BF10-D6B6EBB74ACC}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client.TerminalGUI", "FIOChat.Client.TerminalGUI\FIOChat.Client.TerminalGUI.fsproj", "{B4859769-7CE7-4590-AFF1-4BEB91D8C575}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{279196A5-2E09-419D-BF10-D6B6EBB74ACC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{279196A5-2E09-419D-BF10-D6B6EBB74ACC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{279196A5-2E09-419D-BF10-D6B6EBB74ACC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4859769-7CE7-4590-AFF1-4BEB91D8C575}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4859769-7CE7-4590-AFF1-4BEB91D8C575}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4859769-7CE7-4590-AFF1-4BEB91D8C575}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4859769-7CE7-4590-AFF1-4BEB91D8C575}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
