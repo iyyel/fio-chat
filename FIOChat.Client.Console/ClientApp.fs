@@ -37,7 +37,7 @@ type ClientApp(serverUrl: string, username: string) =
                     return! !- (new Exception("Connection to server was lost!"))
         }
 
-        let receive (clientSocket: ClientWebSocket<Message>) = 
+        let receive (clientSocket: ClientWebSocket<Message>) =
             let handleMessage message = fio {
                 let printMessageWithClientName = printClientMessage clientName
                 match message with

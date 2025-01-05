@@ -20,7 +20,7 @@ let printPrivateMessage user url date message =
     !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url message)
     
 let printInputPrompt user =
-    !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: " (formatDate <| DateTime.Now) user)
+    !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: " (formatDate DateTime.Now) user)
 
 let clearInputPrompt () =
     !+ Console.Write("\r" + new string(' ', 100) + "\r")
