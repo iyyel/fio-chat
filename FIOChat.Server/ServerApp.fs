@@ -2,29 +2,15 @@
 
 open System
 open System.Collections.Generic
-open System.Collections.Immutable
 
-open FIOChat.Shared.Message
+open FIOChat.Shared
 open FIOChat.Server.Printing
+open FIOChat.Server.Collections
 
 open FIO.Core
 open FIO.Library.Network.WebSockets
 
-type CircularBuffer<'T>(capacity: int) =
-    let mutable queue = ImmutableQueue.Empty
-    let mutable count = 0
-
-    member this.Add(item: 'T) =
-        if count >= capacity then
-            queue <- queue.Dequeue()
-        else
-            count <- count + 1
-        queue <- queue.Enqueue(item)
-
-    member this.ToList() =
-        queue |> Seq.toList
-
-and Server =
+type Server =
     { Name: string
       EndPoint: string
       Socket: ServerWebSocket<Message> }
@@ -188,11 +174,11 @@ and ServerApp(serverUrl, serverName) =
                     | false, _ ->
                         let! serverMessage = !+ $"%s{user} (%s{clientEndPoint}) has connected."
                         let! clientMessage = !+ $"%s{user} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
-                        broadcastMessageCache.ToList() |> List.map (fun message -> clientSocket.Send(message))
                         do! !+ clients.Add(user, clientSocket)
                         do! clientSocket.Send <| ConnectionAcceptedResponse (server.Name, user, clientMessage, timestamp)
+                        broadcastMessageCache.ToList() |> List.map (fun message -> clientSocket.Send(message))
                         do! printServerMessage timestamp serverMessage
-                        do! broadcastMessage (Some user) <| ConnectionNotify (server.Name, user, clientMessage, timestamp)
+                        do! broadcastMessage None <| ConnectionNotify (server.Name, user, clientMessage, timestamp)
             }
 
             let handlePrivateMessageRequest fromUser toUser message fromUrl = fio {
@@ -259,6 +245,8 @@ and ServerApp(serverUrl, serverName) =
                     do! printServerMessage $"Received a HelpResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
                 | KickedResponse(server, toUser, message, timestamp) ->
                     do! printServerMessage $"Received a KickedResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
+                | BannedResponse(server, toUser, message, timestamp) ->
+                    do! printServerMessage $"Received a BannedResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{message} and Timestamp: %s{timestamp.ToShortDateString()}. Discarding."
             }
 
             let handleDisconnect clientEndPoint = fio {

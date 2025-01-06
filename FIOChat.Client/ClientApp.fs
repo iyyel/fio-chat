@@ -1,9 +1,9 @@
-﻿namespace FIOChat.Client.Terminal
-
-open FIOChat.Shared.Message
-open FIOChat.Client.Terminal.Printing
+﻿namespace FIOChat.Client
 
 open System
+
+open FIOChat.Shared
+open FIOChat.Client.Printing
 
 open FIO.Core
 open FIO.Library.Network.WebSockets
@@ -13,28 +13,30 @@ type ClientApp(serverUrl: string, username: string) =
 
     let clientName = "FIOChatClient"
 
-    let runClient serverUrl user =
-        let send (clientSocket: ClientWebSocket<Message>) fromUser = fio {
+    let runClient serverUrl username =
+        let send (clientSocket: ClientWebSocket<Message>) = fio {
+            let! error = !- "Connection to server was lost!"
             while true do
-                try
-                    do! printInputPrompt(user)
-                    match Console.ReadLine() with
-                    | input when input.Trim().Length = 0 ->
-                        return ()
-                    | input when input.Trim().StartsWith("\pm@") ->
-                        let parts = input.Trim().Split("@")[1]
-                        let info = parts.Split(":")
-                        let toUser = info.[0].Trim()
-                        let message = info.[1].Trim()
-                        do! clientSocket.Send <| PrivateMessageRequest(fromUser, toUser, message, DateTime.Now)
-                    | input when input.Trim().StartsWith("\online") ->
-                        do! clientSocket.Send <| OnlineClientsRequest(fromUser, DateTime.Now)
-                    | input when input.Trim().StartsWith("\help") ->
-                        do! clientSocket.Send <| HelpRequest(fromUser, DateTime.Now)
-                    | input ->
-                        do! clientSocket.Send <| BroadcastMessageRequest(fromUser, input, DateTime.Now)
-                with _ ->
-                    return! !- (new Exception("Connection to server was lost!"))
+                do! printInputPrompt(username)
+                match Console.ReadLine() with
+                | input when input.Trim().Length = 0 ->
+                    return ()
+                | input when input.Trim().StartsWith("\pm@") ->
+                    let parts = input.Trim().Split("@")[1]
+                    let info = parts.Split(":")
+                    let toUser = info.[0].Trim()
+                    let message = info.[1].Trim()
+                    do! clientSocket.Send <| PrivateMessageRequest(username, toUser, message, DateTime.Now)
+                        >? !- error
+                | input when input.Trim().StartsWith("\online") ->
+                    do! clientSocket.Send <| OnlineClientsRequest(username, DateTime.Now)
+                        >? !- error
+                | input when input.Trim().StartsWith("\help") ->
+                    do! clientSocket.Send <| HelpRequest(username, DateTime.Now)
+                        >? !- error
+                | input ->
+                    do! clientSocket.Send <| BroadcastMessageRequest(username, input, DateTime.Now)
+                        >? !- error
         }
 
         let receive (clientSocket: ClientWebSocket<Message>) =
@@ -49,7 +51,7 @@ type ClientApp(serverUrl: string, username: string) =
                     | _ -> do! printMessageWithClientName timestamp $"Received ConnectionAcceptedResponse with Server: %s{server}, User: %s{user} and Message: %s{message}. Discarding."
                 | ConnectionFailedResponse(server, user, message, timestamp) ->
                     match user = user with
-                    | true -> return! !- (new Exception(message))
+                    | true -> return! !- message
                     | _ -> do! printMessageWithClientName timestamp $"Received ConnectionFailedResponse with Server: %s{server}, User: %s{user} and Message: %s{message}. Discarding."
                 | ConnectionNotify(server, _, message, timestamp) ->
                     do! printServerMessage server timestamp message
@@ -77,26 +79,43 @@ type ClientApp(serverUrl: string, username: string) =
                     do! printServerMessage server timestamp message
                 | KickedResponse(server, _, message, timestamp) ->
                     do! printServerMessage server timestamp message
+                | BannedResponse(server, _, message, timestamp) ->
+                    do! printServerMessage server timestamp message
             }
         
             fio {
                 while true do
                     let! message = clientSocket.Receive()
-                                   >? (!- (new Exception("Connection to server was lost!")))
+                                   >? !- "Connection to server was lost!"
                     do! clearInputPrompt()
                     do! handleMessage message
-                    do! printInputPrompt user
+                    do! printInputPrompt username
             }
+
+        let connect (clientSocket: ClientWebSocket<Message>) = fio {
+            do! clientSocket.Connect serverUrl
+                >? !- "Failed to connect to server!"
+            do! clientSocket.Send <| ConnectionRequest (username, DateTime.Now)
+                >? !- "Failed to send connection request!"
+            let! connectionResponse = clientSocket.Receive()
+                                      >? !- "Failed to receive connection response!"
+            match connectionResponse with
+            | ConnectionAcceptedResponse(_, user, _, _) ->
+                if user <> username then
+                    return! !- "Invalid connection response. Incorrect user!"
+            | ConnectionFailedResponse(_, _, message, _) ->
+                return! !- message
+            | _ -> 
+                return! !- "Invalid connection response!"
+        }
 
         fio {
             do! clearConsole()
             let! clientSocket = !+ ClientWebSocket<Message>()
-            do! clientSocket.Connect <| serverUrl
-            do! clientSocket.Send <| ConnectionRequest (user, DateTime.Now)
-            do! receive clientSocket <!> send clientSocket user
+            do! connect clientSocket
+            do! receive clientSocket <!> send clientSocket
         }
 
     override this.effect = fio {
         do! runClient serverUrl username
-            >>? fun exn -> !- exn.Message
     }
