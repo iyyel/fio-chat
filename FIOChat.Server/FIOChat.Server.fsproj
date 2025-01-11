@@ -15,11 +15,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FIO" Version="0.0.9-alpha" />
+		<PackageReference Include="FIO" Version="0.0.10-alpha" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\FIOChat.Shared\FIOChat.Shared.fsproj" />
+		<ProjectReference Include="..\FIOChat.Shared\FIOChat.Shared.fsproj" />
 	</ItemGroup>
 
 </Project>

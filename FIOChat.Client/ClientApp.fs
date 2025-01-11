@@ -15,27 +15,30 @@ type ClientApp(serverUrl: string, username: string) =
 
     let runClient serverUrl username =
         let send (clientSocket: ClientWebSocket<Message>) = fio {
-            let! error = !- "Connection to server was lost!"
+            let error = "Connection to server was lost!"
             while true do
                 do! printInputPrompt(username)
                 match Console.ReadLine() with
                 | input when input.Trim().Length = 0 ->
                     return ()
                 | input when input.Trim().StartsWith("\pm@") ->
-                    let parts = input.Trim().Split("@")[1]
-                    let info = parts.Split(":")
-                    let toUser = info.[0].Trim()
-                    let message = info.[1].Trim()
-                    do! clientSocket.Send <| PrivateMessageRequest(username, toUser, message, DateTime.Now)
+                    let parts = (input.Trim().Split("@")[1]).Split(":")
+                    let toUser = parts.[0].Trim()
+                    let message = parts.[1].Trim()
+                    do! clientSocket.Send
+                        <| PrivateMessageRequest(username, toUser, message, DateTime.Now)
                         >? !- error
                 | input when input.Trim().StartsWith("\online") ->
-                    do! clientSocket.Send <| OnlineClientsRequest(username, DateTime.Now)
+                    do! clientSocket.Send
+                        <| OnlineClientsRequest(username, DateTime.Now)
                         >? !- error
                 | input when input.Trim().StartsWith("\help") ->
-                    do! clientSocket.Send <| HelpRequest(username, DateTime.Now)
+                    do! clientSocket.Send
+                        <| HelpRequest(username, DateTime.Now)
                         >? !- error
                 | input ->
-                    do! clientSocket.Send <| BroadcastMessageRequest(username, input, DateTime.Now)
+                    do! clientSocket.Send
+                        <| BroadcastMessageRequest(username, input, DateTime.Now)
                         >? !- error
         }
 
@@ -95,10 +98,12 @@ type ClientApp(serverUrl: string, username: string) =
         let connect (clientSocket: ClientWebSocket<Message>) = fio {
             do! clientSocket.Connect serverUrl
                 >? !- "Failed to connect to server!"
-            do! clientSocket.Send <| ConnectionRequest (username, DateTime.Now)
+            do! clientSocket.Send
+                <| ConnectionRequest (username, DateTime.Now)
                 >? !- "Failed to send connection request!"
-            let! connectionResponse = clientSocket.Receive()
-                                      >? !- "Failed to receive connection response!"
+            let! connectionResponse =
+                clientSocket.Receive()
+                >? !- "Failed to receive connection response!"
             match connectionResponse with
             | ConnectionAcceptedResponse(_, user, _, _) ->
                 if user <> username then

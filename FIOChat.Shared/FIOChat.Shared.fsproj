@@ -9,9 +9,4 @@
 		<Compile Include="Shared.fs" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FIO" Version="0.0.9-alpha" />
-	</ItemGroup>
-
 </Project>

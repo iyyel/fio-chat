@@ -1,11 +1,11 @@
 ﻿module FIOChat.Server.Printing
 
-open FIO.Core
+open System
+open System.Globalization
 
 open BlackFox.ColoredPrintf
 
-open System
-open System.Globalization
+open FIO.Core
 
 let private formatDate (date: DateTime) =
     date.ToString("dd.MM.yy HH:mm:ss", CultureInfo.InvariantCulture)
