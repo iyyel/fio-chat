@@ -311,11 +311,12 @@ and ServerApp(serverUrl, serverName) =
                 let! clientEndPoint =
                     clientSocket.RemoteEndPoint()
                     >>= fun endPoint -> !+ endPoint.ToString()
-                    >? !- "Failed to get remote endpoint of socket!"
+                    >? !- "Failed to get remote endpoint of client socket!"
                 try
                     while true do
-                        let! message = clientSocket.Receive()
-                                       >? !- "Failed to receive message from client!"
+                        let! message = 
+                            clientSocket.Receive()
+                            >? !- "Failed to receive message from client!"
                         do! clearInputPrompt()
                         do! handleMessage message clientEndPoint
                         do! printInputPrompt server.Name
@@ -328,7 +329,7 @@ and ServerApp(serverUrl, serverName) =
             while true do
                 let! clientSocket =
                     server.Socket.Accept()
-                    >? !- "Failed to accept client connection!"
+                    >? !- "Failed to accept incoming client connection!"
                 do! !! (handleClient clientSocket server)
         }
 

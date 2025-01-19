@@ -88,8 +88,9 @@ type ClientApp(serverUrl: string, username: string) =
         
             fio {
                 while true do
-                    let! message = clientSocket.Receive()
-                                   >? !- "Connection to server was lost!"
+                    let! message =
+                        clientSocket.Receive()
+                        >? !- "Connection to server was lost!"
                     do! clearInputPrompt()
                     do! handleMessage message
                     do! printInputPrompt username
