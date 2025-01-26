@@ -3,26 +3,26 @@
 open System
 
 type Message =
-    | ConnectionRequest of Username: string * Timestamp: DateTime
-    | ConnectionAcceptedResponse of Server: string * Username: string * Message: string * Timestamp: DateTime
-    | ConnectionFailedResponse of Server: string * Username: string * Message: string * Timestamp: DateTime
+    | ConnectionRequest of user: string * date: DateTime
+    | ConnectionAcceptedResponse of server: string * user: string * msg: string * date: DateTime
+    | ConnectionFailedResponse of server: string * user: string * msg: string * date: DateTime
 
-    | ConnectionNotify of Server: string * Username: string * Message: string * Timestamp: DateTime
-    | DisconnectionNotify of Server: string * Username: string * Message: string * Timestamp: DateTime
+    | ConnectionNotify of server: string * user: string * msg: string * date: DateTime
+    | DisconnectionNotify of server: string * user: string * msg: string * date: DateTime
 
-    | BroadcastMessageRequest of FromUsername: string * Message: string * Timestamp: DateTime
-    | BroadcastMessageResponse of Server: string * FromUsername: string * Message: string * Timestamp: DateTime
-    | ServerBroadcastMessageResponse of Server: string * Message: string * Timestamp: DateTime
+    | BroadcastMessageRequest of fromUser: string * msg: string * date: DateTime
+    | BroadcastMessageResponse of server: string * fromUser: string * msg: string * date: DateTime
+    | ServerBroadcastMessageResponse of server: string * msg: string * date: DateTime
 
-    | PrivateMessageRequest of FromUsername: string * ToUsername: string * Message: string * Timestamp: DateTime
-    | PrivateMessageResponse of Server: string * FromUsername: string * ToUsername: string * Message: string * Timestamp: DateTime
-    | PrivateMessageFailedResponse of Server: string * FromUsername: string * ToUsername: string * Message: string * Timestamp: DateTime
+    | PrivateMessageRequest of fromUser: string * toUser: string * msg: string * date: DateTime
+    | PrivateMessageResponse of server: string * fromUser: string * toUser: string * msg: string * date: DateTime
+    | PrivateMessageFailedResponse of server: string * fromUser: string * toUser: string * msg: string * date: DateTime
 
-    | OnlineClientsRequest of FromUsername: string * Timestamp: DateTime
-    | OnlineClientsResponse of Server: string * ToUsername: string * Clients: string list * Timestamp: DateTime
+    | OnlineClientsRequest of fromUser: string * date: DateTime
+    | OnlineClientsResponse of server: string * toUser: string * clients: string list * date: DateTime
 
-    | HelpRequest of FromUsername: string * Timestamp: DateTime
-    | HelpResponse of Server: string * ToUsername: string * Message: string * Timestamp: DateTime
+    | HelpRequest of fromUser: string * date: DateTime
+    | HelpResponse of server: string * toUser: string * msg: string * date: DateTime
 
-    | KickedResponse of Server: string * ToUsername: string * Message: string * Timestamp: DateTime
-    | BannedResponse of Server: string * ToUsername: string * Message: string * Timestamp: DateTime
+    | KickedResponse of server: string * toUser: string * msg: string * date: DateTime
+    | BannedResponse of server: string * toUser: string * msg: string * date: DateTime

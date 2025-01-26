@@ -10,14 +10,14 @@ open FIO.Core
 let private formatDate (date: DateTime) =
     date.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
 
-let printServerMessage user date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: $darkmagenta[%s]" (formatDate date) user message)
+let printServerMsg user date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: $darkmagenta[%s]" (formatDate date) user msg)
 
-let printClientMessage user date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s]]: $gray[%s]" (formatDate date) user message)
+let printClientMsg user date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s]]: $gray[%s]" (formatDate date) user msg)
 
-let printPrivateMessage user date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s]]: $gray[%s]" (formatDate date) user message)
+let printPrivateMsg user date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s]]: $gray[%s]" (formatDate date) user msg)
     
 let printInputPrompt user =
     !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkgreen[%s]]: " (formatDate DateTime.Now) user)

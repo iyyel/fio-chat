@@ -8,109 +8,109 @@ open FIOChat.Client.Printing
 open FIO.Core
 open FIO.Library.Network.WebSockets
 
-type ClientApp(serverUrl: string, username: string) =
+type ClientApp(serverUrl: string, user: string) =
     inherit FIOApp<unit, string>()
 
     let clientName = "FIOChatClient"
 
-    let runClient serverUrl username =
+    let run serverUrl user =
         let send (clientSocket: ClientWebSocket<Message>) = fio {
-            let error = "Connection to server was lost!"
+            let err = "Connection to server was lost!"
             while true do
-                do! printInputPrompt(username)
+                do! printInputPrompt user
                 match Console.ReadLine() with
                 | input when input.Trim().Length = 0 ->
                     return ()
                 | input when input.Trim().StartsWith("\pm@") ->
                     let parts = (input.Trim().Split("@")[1]).Split(":")
                     let toUser = parts.[0].Trim()
-                    let message = parts.[1].Trim()
+                    let msg = parts.[1].Trim()
                     do! clientSocket.Send
-                        <| PrivateMessageRequest(username, toUser, message, DateTime.Now)
-                        >? !- error
+                        <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
+                        >? !- err
                 | input when input.Trim().StartsWith("\online") ->
                     do! clientSocket.Send
-                        <| OnlineClientsRequest(username, DateTime.Now)
-                        >? !- error
+                        <| OnlineClientsRequest (user, DateTime.Now)
+                        >? !- err
                 | input when input.Trim().StartsWith("\help") ->
                     do! clientSocket.Send
-                        <| HelpRequest(username, DateTime.Now)
-                        >? !- error
+                        <| HelpRequest (user, DateTime.Now)
+                        >? !- err
                 | input ->
                     do! clientSocket.Send
-                        <| BroadcastMessageRequest(username, input, DateTime.Now)
-                        >? !- error
+                        <| BroadcastMessageRequest (user, input, DateTime.Now)
+                        >? !- err
         }
 
         let receive (clientSocket: ClientWebSocket<Message>) =
-            let handleMessage message = fio {
-                let printMessageWithClientName = printClientMessage clientName
-                match message with
-                | ConnectionRequest (user, timestamp) ->
-                    do! printMessageWithClientName timestamp $"Received ConnectionRequest with User: %s{user}. Discarding."
-                | ConnectionAcceptedResponse(server, user, message, timestamp) ->
-                    match user = user with
-                    | true -> do! printServerMessage server timestamp message
-                    | _ -> do! printMessageWithClientName timestamp $"Received ConnectionAcceptedResponse with Server: %s{server}, User: %s{user} and Message: %s{message}. Discarding."
-                | ConnectionFailedResponse(server, user, message, timestamp) ->
-                    match user = user with
-                    | true -> return! !- message
-                    | _ -> do! printMessageWithClientName timestamp $"Received ConnectionFailedResponse with Server: %s{server}, User: %s{user} and Message: %s{message}. Discarding."
-                | ConnectionNotify(server, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | DisconnectionNotify(server, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | BroadcastMessageRequest(fromUser, message, timestamp) ->
-                    do! printMessageWithClientName timestamp $"Received BroadcastMessageRequest with FromUser: %s{fromUser} and Message: %s{message}. Discarding."
-                | BroadcastMessageResponse(_, fromUser, message, timestamp) ->
-                    do! printClientMessage fromUser timestamp message
-                | ServerBroadcastMessageResponse(server, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | PrivateMessageRequest(fromUser, toUser, message, timestamp) -> 
-                    do! printMessageWithClientName timestamp $"Received PrivateMessageRequest with FromUser: %s{fromUser}, ToUser: %s{toUser} and Message: %s{message}. Discarding."
-                | PrivateMessageResponse(_, fromUser, _, message, timestamp) ->
-                    do! printPrivateMessage $"PM: %s{fromUser}" timestamp message
-                | PrivateMessageFailedResponse(server, _, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | OnlineClientsRequest(fromUser, timestamp) ->
-                    do! printMessageWithClientName timestamp $"Received OnlineClientsRequest with FromUser: %s{fromUser}. Discarding."
-                | OnlineClientsResponse(server, _, clientList, timestamp) ->
-                    do! printServerMessage server timestamp $"""Online: {String.Join(", ", clientList)}."""
-                | HelpRequest(fromUser, timestamp) ->
-                    do! printMessageWithClientName timestamp $"Received HelpRequest with FromUser: %s{fromUser}. Discarding."
-                | HelpResponse(server, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | KickedResponse(server, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
-                | BannedResponse(server, _, message, timestamp) ->
-                    do! printServerMessage server timestamp message
+            let handleMsg msg = fio {
+                let printClientNameMsg = printClientMsg clientName
+                match msg with
+                | ConnectionRequest (user, date) ->
+                    do! printClientNameMsg date $"Received ConnectionRequest with User: %s{user}. Discarding."
+                | ConnectionAcceptedResponse (server, acceptedUser, msg, date) ->
+                    match user = acceptedUser with
+                    | true -> do! printServerMsg server date msg
+                    | _ -> do! printClientNameMsg date $"Received ConnectionAcceptedResponse with Server: %s{server}, User: %s{acceptedUser} and Message: %s{msg}. Discarding."
+                | ConnectionFailedResponse (server, failedUser, msg, date) ->
+                    match user = failedUser with
+                    | true -> return! !- msg
+                    | _ -> do! printClientNameMsg date $"Received ConnectionFailedResponse with Server: %s{server}, User: %s{failedUser} and Message: %s{msg}. Discarding."
+                | ConnectionNotify (server, _, msg, date) ->
+                    do! printServerMsg server date msg
+                | DisconnectionNotify (server, _, msg, date) ->
+                    do! printServerMsg server date msg
+                | BroadcastMessageRequest (fromUser, msg, date) ->
+                    do! printClientNameMsg date $"Received BroadcastMessageRequest with FromUser: %s{fromUser} and Message: %s{msg}. Discarding."
+                | BroadcastMessageResponse (_, fromUser, msg, date) ->
+                    do! printClientMsg fromUser date msg
+                | ServerBroadcastMessageResponse (server, msg, date) ->
+                    do! printServerMsg server date msg
+                | PrivateMessageRequest (fromUser, toUser, msg, date) -> 
+                    do! printClientNameMsg date $"Received PrivateMessageRequest with FromUser: %s{fromUser}, ToUser: %s{toUser} and Message: %s{msg}. Discarding."
+                | PrivateMessageResponse (_, fromUser, _, msg, date) ->
+                    do! printPrivateMsg $"PM: %s{fromUser}" date msg
+                | PrivateMessageFailedResponse(server, _, _, msg, date) ->
+                    do! printServerMsg server date msg
+                | OnlineClientsRequest (fromUser, date) ->
+                    do! printClientNameMsg date $"Received OnlineClientsRequest with FromUser: %s{fromUser}. Discarding."
+                | OnlineClientsResponse (server, _, clients, date) ->
+                    do! printServerMsg server date $"""Online: {String.Join(", ", clients)}."""
+                | HelpRequest (fromUser, date) ->
+                    do! printClientNameMsg date $"Received HelpRequest with FromUser: %s{fromUser}. Discarding."
+                | HelpResponse (server, _, msg, date) ->
+                    do! printServerMsg server date msg
+                | KickedResponse (server, _, msg, date) ->
+                    do! printServerMsg server date msg
+                | BannedResponse (server, _, msg, date) ->
+                    do! printServerMsg server date msg
             }
         
             fio {
                 while true do
-                    let! message =
+                    let! msg =
                         clientSocket.Receive()
                         >? !- "Connection to server was lost!"
                     do! clearInputPrompt()
-                    do! handleMessage message
-                    do! printInputPrompt username
+                    do! handleMsg msg
+                    do! printInputPrompt user
             }
 
         let connect (clientSocket: ClientWebSocket<Message>) = fio {
             do! clientSocket.Connect serverUrl
                 >? !- "Failed to connect to server!"
             do! clientSocket.Send
-                <| ConnectionRequest (username, DateTime.Now)
+                <| ConnectionRequest (user, DateTime.Now)
                 >? !- "Failed to send connection request!"
-            let! connectionResponse =
+            let! response =
                 clientSocket.Receive()
                 >? !- "Failed to receive connection response!"
-            match connectionResponse with
-            | ConnectionAcceptedResponse(_, user, _, _) ->
-                if user <> username then
+            match response with
+            | ConnectionAcceptedResponse(_, acceptedUser, _, _) ->
+                if user <> acceptedUser then
                     return! !- "Invalid connection response. Incorrect user!"
-            | ConnectionFailedResponse(_, _, message, _) ->
-                return! !- message
+            | ConnectionFailedResponse(_, _, msg, _) ->
+                return! !- msg
             | _ -> 
                 return! !- "Invalid connection response!"
         }
@@ -123,5 +123,5 @@ type ClientApp(serverUrl: string, username: string) =
         }
 
     override this.effect = fio {
-        do! runClient serverUrl username
+        do! run serverUrl user
     }

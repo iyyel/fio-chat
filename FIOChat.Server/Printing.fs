@@ -10,14 +10,14 @@ open FIO.Core
 let private formatDate (date: DateTime) =
     date.ToString("dd.MM.yy HH:mm:ss", CultureInfo.InvariantCulture)
 
-let printServerMessage user url date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s] ($darkgreen[%s])]: $darkmagenta[%s]" (formatDate date) user url message)
+let printServerMsg user url date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s] ($darkgreen[%s])]: $darkmagenta[%s]" (formatDate date) user url msg)
 
-let printClientMessage user url date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url message)
+let printClientMsg user url date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkyellow[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url msg)
 
-let printPrivateMessage user url date message =
-    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url message)
+let printPrivateMsg user url date msg =
+    !+ (colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkcyan[%s] ($darkgreen[%s])]: $gray[%s]" (formatDate date) user url msg)
     
 let printInputPrompt user =
     !+ (colorprintf "$darkblue[[%s]$darkblue[\]] [$darkmagenta[%s]]: " (formatDate DateTime.Now) user)
