@@ -27,19 +27,19 @@ type ClientApp(serverUrl: string, user: string) =
                     let msg = parts.[1].Trim()
                     do! clientSocket.Send
                         <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
-                        >? !- err
+                        >>? !- err
                 | input when input.Trim().StartsWith("\online") ->
                     do! clientSocket.Send
                         <| OnlineClientsRequest (user, DateTime.Now)
-                        >? !- err
+                        >>? !- err
                 | input when input.Trim().StartsWith("\help") ->
                     do! clientSocket.Send
                         <| HelpRequest (user, DateTime.Now)
-                        >? !- err
+                        >>? !- err
                 | input ->
                     do! clientSocket.Send
                         <| BroadcastMessageRequest (user, input, DateTime.Now)
-                        >? !- err
+                        >>? !- err
         }
 
         let receive (clientSocket: ClientWebSocket<Message>) =
@@ -90,7 +90,7 @@ type ClientApp(serverUrl: string, user: string) =
                 while true do
                     let! msg =
                         clientSocket.Receive()
-                        >? !- "Connection to server was lost!"
+                        >>? !- "Connection to server was lost!"
                     do! clearInputPrompt()
                     do! handleMsg msg
                     do! printInputPrompt user
@@ -98,13 +98,13 @@ type ClientApp(serverUrl: string, user: string) =
 
         let connect (clientSocket: ClientWebSocket<Message>) = fio {
             do! clientSocket.Connect serverUrl
-                >? !- "Failed to connect to server!"
+                >>? !- "Failed to connect to server!"
             do! clientSocket.Send
                 <| ConnectionRequest (user, DateTime.Now)
-                >? !- "Failed to send connection request!"
+                >>? !- "Failed to send connection request!"
             let! response =
                 clientSocket.Receive()
-                >? !- "Failed to receive connection response!"
+                >>? !- "Failed to receive connection response!"
             match response with
             | ConnectionAcceptedResponse(_, acceptedUser, _, _) ->
                 if user <> acceptedUser then
