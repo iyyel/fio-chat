@@ -13,12 +13,12 @@ open FIO.Library.Network.WebSockets
 type Server =
     { Name: string
       EndPoint: string
-      Socket: ServerWebSocket<Message> }
+      Socket: ServerWebSocket<Message, Message> }
 
 and ServerApp(serverUrl, serverName) =
     inherit FIOApp<unit, string>()
 
-    let clients = Dictionary<string, WebSocket<Message>>()
+    let clients = Dictionary<string, WebSocket<Message, Message>>()
     let bannedUsers = Dictionary<string, string>()
     let broadcastMsgCache = CircularBuffer<Message> 100
 
@@ -160,7 +160,7 @@ and ServerApp(serverUrl, serverName) =
                         do! printServerMsg DateTime.Now $"Invalid command. Type \commands for a list of commands."
             }
 
-        let handleClient (clientSocket: WebSocket<Message>) server =
+        let handleClient (clientSocket: WebSocket<Message, Message>) server =
             let printServerMsg = printServerMsg server.Name server.EndPoint
 
             let handleConnectionRequest user clientEndPoint = fio {
@@ -334,7 +334,7 @@ and ServerApp(serverUrl, serverName) =
 
         fio {
             do! clearConsole()
-            let! server = !+ { Name = serverName; EndPoint = serverUrl; Socket = new ServerWebSocket<Message>() }
+            let! server = !+ { Name = serverName; EndPoint = serverUrl; Socket = new ServerWebSocket<Message, Message>() }
             do! server.Socket.Start <| server.EndPoint
                 >>? !- "Failed to start server!"
             let! date = !+ DateTime.Now

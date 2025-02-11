@@ -14,7 +14,7 @@ type ClientApp(serverUrl: string, user: string) =
     let clientName = "FIOChatClient"
 
     let run serverUrl user =
-        let send (clientSocket: ClientWebSocket<Message>) = fio {
+        let send (clientSocket: ClientWebSocket<Message, Message>) = fio {
             let err = "Connection to server was lost!"
             while true do
                 do! printInputPrompt user
@@ -42,7 +42,7 @@ type ClientApp(serverUrl: string, user: string) =
                         >>? !- err
         }
 
-        let receive (clientSocket: ClientWebSocket<Message>) =
+        let receive (clientSocket: ClientWebSocket<Message, Message>) =
             let handleMsg msg = fio {
                 let printClientNameMsg = printClientMsg clientName
                 match msg with
@@ -96,7 +96,7 @@ type ClientApp(serverUrl: string, user: string) =
                     do! printInputPrompt user
             }
 
-        let connect (clientSocket: ClientWebSocket<Message>) = fio {
+        let connect (clientSocket: ClientWebSocket<Message, Message>) = fio {
             do! clientSocket.Connect serverUrl
                 >>? !- "Failed to connect to server!"
             do! clientSocket.Send
@@ -117,7 +117,7 @@ type ClientApp(serverUrl: string, user: string) =
 
         fio {
             do! clearConsole()
-            let! clientSocket = !+ ClientWebSocket<Message>()
+            let! clientSocket = !+ ClientWebSocket<Message, Message>()
             do! connect clientSocket
             do! receive clientSocket <!> send clientSocket
         }

@@ -460,3 +460,7 @@ Scripts/
 .config
 /Web.Client/Program.fs.js
 /Web.Client/Core.fs.js
+/FIOChat.WebClient/Program.fs.js
+/FIOChat.WebClient/package-lock.json
+/FIOChat.WebClient/Core.fs.js
+/FIOChat.Shared/Shared.fs.js
