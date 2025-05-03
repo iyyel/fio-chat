@@ -1,21 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
 		<TargetFramework>net9.0</TargetFramework>
-		<RootNamespace>fio_chat_server</RootNamespace>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>fio_chat_client</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="Collections.fs" />
 		<Compile Include="Printing.fs" />
-		<Compile Include="ServerApp.fs" />
+		<Compile Include="ClientApp.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FIO" Version="0.0.14-alpha" />
+		<PackageReference Include="FIO" Version="0.0.20-alpha" />
+		<PackageReference Include="FSharp.SystemTextJson" Version="1.3.13" />
 	</ItemGroup>
 
 	<ItemGroup>

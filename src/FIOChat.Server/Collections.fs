@@ -4,6 +4,7 @@ open System.Collections.Immutable
 
 module Collections =
 
+    // TODO: Make this an in memory cache.
     type CircularBuffer<'T>(capacity: int) =
         let mutable queue = ImmutableQueue.Empty
         let mutable count = 0
