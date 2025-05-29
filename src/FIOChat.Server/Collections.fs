@@ -4,16 +4,17 @@ open System.Collections.Immutable
 
 module Collections =
 
+    // TODO: Make this an in memory cache.
     type CircularBuffer<'T>(capacity: int) =
         let mutable queue = ImmutableQueue.Empty
         let mutable count = 0
 
-        member this.Add(item: 'T) =
+        member _.Add(item: 'T) =
             if count >= capacity then
                 queue <- queue.Dequeue()
             else
                 count <- count + 1
-            queue <- queue.Enqueue(item)
+            queue <- queue.Enqueue item
 
-        member this.ToList() =
+        member _.ToList() =
             queue |> Seq.toList
