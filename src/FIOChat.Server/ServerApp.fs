@@ -1,6 +1,7 @@
 ﻿namespace FIOChat.Server
 
-open FIO.Core
+open FIO.DSL
+open FIO.App
 open FIO.Lib.IO
 open FIO.Lib.Net.WebSockets
 
@@ -190,6 +191,7 @@ and ServerApp (serverUrl, serverName) =
                             let! clientMsg = !+ $"%s{user} has joined the chat. Welcome to %s{server.Name}! 🪻💜"
                             do! !<< (fun () -> clients.Add(user, clientSocket))
                             do! clientSocket.Send <| ConnectionAcceptedResponse (server.Name, user, clientMsg, date)
+                            // TODO: Is this not working?
                             broadcastMsgCache.ToList() |> List.map clientSocket.Send
                             do! printServerMsg date serverMsg
                             do! broadcastMsg None 
@@ -320,7 +322,7 @@ and ServerApp (serverUrl, serverName) =
             do! handleClients server <~> handleCommands server
         }
 
-    override this.effect =
+    override _.effect =
         fio {
             do! run serverUrl
         }

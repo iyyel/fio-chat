@@ -1,6 +1,6 @@
 ﻿module FIOChat.Client.Printing
 
-open FIO.Core
+open FIO.DSL
 open FIO.Lib.IO
 
 open BlackFox.ColoredPrintf

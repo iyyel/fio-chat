@@ -1,6 +1,7 @@
 ﻿namespace FIOChat.Client
 
-open FIO.Core
+open FIO.DSL
+open FIO.App
 open FIO.Lib.IO
 open FIO.Lib.Net.WebSockets
 
@@ -116,7 +117,7 @@ type ClientApp (serverUrl: string, user: string) =
             do! send clientSocket <~> receive clientSocket
         }
 
-    override this.effect =
+    override _.effect =
         fio {
             do! run serverUrl user
         }
