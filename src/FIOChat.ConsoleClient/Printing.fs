@@ -1,7 +1,7 @@
 ﻿module FIOChat.Client.Printing
 
-open FIO.DSL
-open FIO.Lib.IO
+open FSharp.FIO.DSL
+open FSharp.FIO.Lib.IO
 
 open BlackFox.ColoredPrintf
 

@@ -14,7 +14,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FIO" Version="0.0.21-alpha" />
+		<PackageReference Include="FSharp.FIO" Version="0.0.30-alpha" />
 		<PackageReference Include="FSharp.SystemTextJson" Version="1.3.13" />
 	</ItemGroup>
 

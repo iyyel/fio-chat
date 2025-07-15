@@ -1,9 +1,9 @@
 ﻿namespace FIOChat.Server
 
-open FIO.DSL
-open FIO.App
-open FIO.Lib.IO
-open FIO.Lib.Net.WebSockets
+open FSharp.FIO.DSL
+open FSharp.FIO.App
+open FSharp.FIO.Lib.IO
+open FSharp.FIO.Lib.Net.WebSockets
 
 open FIOChat.Shared
 open FIOChat.Server.Printing
