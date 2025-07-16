@@ -1,1 +1,1 @@
-Coming soon! TM 🪻💜
+Coming soon! 🪻💜

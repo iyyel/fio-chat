@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Shared", "FIOChat.Shared\FIOChat.Shared.fsproj", "{20969287-41DD-43CE-8545-AB18119A3CDF}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.ConsoleClient", "src\FIOChat.ConsoleClient\FIOChat.ConsoleClient.fsproj", "{74E27ABD-DEC1-44F5-9200-964DB789B596}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Server", "FIOChat.Server\FIOChat.Server.fsproj", "{8600B7B8-501B-44C5-BD85-7D7FCF664725}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Server", "src\FIOChat.Server\FIOChat.Server.fsproj", "{8600B7B8-501B-44C5-BD85-7D7FCF664725}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.ConsoleClient", "FIOChat.ConsoleClient\FIOChat.ConsoleClient.fsproj", "{74E27ABD-DEC1-44F5-9200-964DB789B596}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.WebClient", "FIOChat.WebClient\FIOChat.WebClient.fsproj", "{487E0511-EF75-4909-94D5-D44EBCBE5418}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Shared", "src\FIOChat.Shared\FIOChat.Shared.fsproj", "{20969287-41DD-43CE-8545-AB18119A3CDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{74E27ABD-DEC1-44F5-9200-964DB789B596}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{74E27ABD-DEC1-44F5-9200-964DB789B596}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{74E27ABD-DEC1-44F5-9200-964DB789B596}.Release|Any CPU.Build.0 = Release|Any CPU
-		{487E0511-EF75-4909-94D5-D44EBCBE5418}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{487E0511-EF75-4909-94D5-D44EBCBE5418}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{487E0511-EF75-4909-94D5-D44EBCBE5418}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{487E0511-EF75-4909-94D5-D44EBCBE5418}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
