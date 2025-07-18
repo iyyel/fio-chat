@@ -25,4 +25,3 @@ type Message =
     | HelpResponse of server: string * toUser: string * msg: string * date: DateTime
 
     | KickedResponse of server: string * toUser: string * msg: string * date: DateTime
-    | BannedResponse of server: string * toUser: string * msg: string * date: DateTime

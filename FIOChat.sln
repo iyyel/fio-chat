@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client", "src\FIOChat.Client\FIOChat.Client.fsproj", "{74E27ABD-DEC1-44F5-9200-964DB789B596}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Client", "FIOChat.Client\FIOChat.Client.fsproj", "{74E27ABD-DEC1-44F5-9200-964DB789B596}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Server", "src\FIOChat.Server\FIOChat.Server.fsproj", "{8600B7B8-501B-44C5-BD85-7D7FCF664725}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Server", "FIOChat.Server\FIOChat.Server.fsproj", "{8600B7B8-501B-44C5-BD85-7D7FCF664725}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Common", "src\FIOChat.Common\FIOChat.Common.fsproj", "{20969287-41DD-43CE-8545-AB18119A3CDF}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FIOChat.Common", "FIOChat.Common\FIOChat.Common.fsproj", "{20969287-41DD-43CE-8545-AB18119A3CDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

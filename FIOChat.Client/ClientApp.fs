@@ -22,28 +22,25 @@ type ClientApp (serverUrl: string, user: string) =
         let send (clientSocket: FClientWebSocket<Message, Message, exn>) =
             fio {
                 while true do
-                    try
-                        do! printInputPrompt user
-                        match! FConsole.ReadLine () with
-                        | input when input.Trim().Length = 0 ->
-                            return ()
-                        | input when input.Trim().StartsWith "\pm@" ->
-                            let parts = (input.Trim().Split("@")[1]).Split ":"
-                            let toUser = parts[0].Trim()
-                            let msg = parts[1].Trim()
-                            do! clientSocket.Send
-                                <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
-                        | input when input.Trim().StartsWith "\online" ->
-                            do! clientSocket.Send
-                                <| OnlineClientsRequest (user, DateTime.Now)
-                        | input when input.Trim().StartsWith "\help" ->
-                            do! clientSocket.Send
-                                <| HelpRequest (user, DateTime.Now)
-                        | input ->
-                            do! clientSocket.Send
-                                <| BroadcastMessageRequest (user, input, DateTime.Now)
-                    with exn ->
-                        return! !- (Exception exn.Message)
+                    do! printInputPrompt user
+                    match! FConsole.ReadLine () with
+                    | input when input.Trim().Length = 0 ->
+                        return ()
+                    | input when input.Trim().StartsWith "\pm@" ->
+                        let parts = (input.Trim().Split("@")[1]).Split ":"
+                        let toUser = parts[0].Trim()
+                        let msg = parts[1].Trim()
+                        do! clientSocket.Send
+                            <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
+                    | input when input.Trim().StartsWith "\online" ->
+                        do! clientSocket.Send
+                            <| OnlineClientsRequest (user, DateTime.Now)
+                    | input when input.Trim().StartsWith "\help" ->
+                        do! clientSocket.Send
+                            <| HelpRequest (user, DateTime.Now)
+                    | input ->
+                        do! clientSocket.Send
+                            <| BroadcastMessageRequest (user, input, DateTime.Now)
             }
 
         let receive (clientSocket: FClientWebSocket<Message, Message, exn>) =
@@ -99,19 +96,14 @@ type ClientApp (serverUrl: string, user: string) =
                         do! printServerMsg server date msg
                     | KickedResponse (server, _, msg, date) ->
                         do! printServerMsg server date msg
-                    | BannedResponse (server, _, msg, date) ->
-                        do! printServerMsg server date msg
                 }
         
             fio {
                 while true do
-                    try
-                        let! msg = clientSocket.Receive ()
-                        do! clearInputPrompt ()
-                        do! handleMsg msg
-                        do! printInputPrompt user
-                    with exn ->
-                        return! !- (Exception exn.Message)
+                    let! msg = clientSocket.Receive ()
+                    do! clearInputPrompt ()
+                    do! handleMsg msg
+                    do! printInputPrompt user
             }
 
         let connect (clientSocket: FClientWebSocket<Message, Message, exn>) =
@@ -133,10 +125,13 @@ type ClientApp (serverUrl: string, user: string) =
             do! FConsole.Clear ()
             let! clientSocket = FClientWebSocket<Message, Message, exn>.Create options
             do! connect clientSocket
-            do! receive clientSocket <~> send clientSocket
+            do! send clientSocket <~> receive clientSocket
         }
 
     override _.effect =
         fio {
-            do! run serverUrl user
+            try
+                do! run serverUrl user
+            with exn ->
+                return! !- (Exception exn.Message)
         }
