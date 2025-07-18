@@ -5,9 +5,10 @@ open FSharp.FIO.App
 open FSharp.FIO.Lib.IO
 open FSharp.FIO.Lib.Net.WebSockets
 
-open FIOChat.Shared
+open FIOChat.Common
 open FIOChat.Server.Printing
-open FIOChat.Server.Collections
+
+open CircularBuffer
 
 open System
 open System.Collections.Generic
@@ -23,7 +24,6 @@ and ServerApp (serverUrl, serverName) =
     
     let clients = Dictionary<string, FWebSocket<Message, Message, exn>>()
     let bannedUsers = Dictionary<string, string>()
-    // TODO: Make this an InMemory cache.
     let broadcastMsgCache = CircularBuffer<Message> 100
     let options = JsonFSharpOptions.Default().ToJsonSerializerOptions()
 
@@ -32,7 +32,7 @@ and ServerApp (serverUrl, serverName) =
         let broadcastMsg filteredUser msg =
             fio {
                 let! sendMsgs = !<< (fun () ->
-                    broadcastMsgCache.Add msg
+                    broadcastMsgCache.PushBack msg
                     match filteredUser with
                     | Some filteredUser ->
                         clients
@@ -210,9 +210,8 @@ and ServerApp (serverUrl, serverName) =
                             do! !<< (fun () -> clients.Add(user, clientSocket))
                             do! clientSocket.Send
                                 <| ConnectionAcceptedResponse (server.Name, user, clientMsg, date)
-                            // TODO: Is this not working?
-                            broadcastMsgCache.ToList ()
-                                |> List.map clientSocket.Send
+                            for msg in broadcastMsgCache.ToArray () do
+                                do! clientSocket.Send msg
                             do! printServerMsg date serverMsg
                             do! broadcastMsg None
                                 <| ConnectionNotify (server.Name, user, clientMsg, date)
@@ -356,7 +355,7 @@ and ServerApp (serverUrl, serverName) =
             let! date = !+ DateTime.Now
             do! printServerMsg server.Name server.EndPoint date $"Server started on %s{server.EndPoint}. Listening for clients..."
             do! printServerMsg server.Name server.EndPoint date $"Type \commands for a list of available commands."
-            do! handleClients server <~> handleCommands server
+            do! handleCommands server <~> handleClients server
         }
 
     override _.effect =

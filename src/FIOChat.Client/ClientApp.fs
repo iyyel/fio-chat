@@ -1,12 +1,12 @@
-﻿namespace FIOChat.ConsoleClient
+﻿namespace FIOChat.Client
 
 open FSharp.FIO.DSL
 open FSharp.FIO.App
 open FSharp.FIO.Lib.IO
 open FSharp.FIO.Lib.Net.WebSockets
 
-open FIOChat.Shared
-open FIOChat.ConsoleClient.Printing
+open FIOChat.Common
+open FIOChat.Client.Printing
 
 open System
 open System.Text.Json.Serialization
@@ -22,30 +22,28 @@ type ClientApp (serverUrl: string, user: string) =
         let send (clientSocket: FClientWebSocket<Message, Message, exn>) =
             fio {
                 while true do
-                try
-                    do! printInputPrompt user
-                    match! FConsole.ReadLine () with
-                    | input when input.Trim().Length = 0 ->
-                        return ()
-                    | input when input.Trim().StartsWith "\pm@" ->
-                        let parts = (input.Trim().Split("@")[1]).Split ":"
-                        let toUser = parts[0].Trim()
-                        let msg = parts[1].Trim()
-                        do! clientSocket.Send
-                            <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
-                    | input when input.Trim().StartsWith "\online" ->
-                        do! clientSocket.Send
-                            <| OnlineClientsRequest (user, DateTime.Now)
-                    | input when input.Trim().StartsWith "\help" ->
-                        do! clientSocket.Send
-                            <| HelpRequest (user, DateTime.Now)
-                    | input ->
-                        do! clientSocket.Send
-                            <| BroadcastMessageRequest (user, input, DateTime.Now)
-                with exn ->
-                    do! clearInputPrompt ()
-                    do! !- exn
-                    return ()
+                    try
+                        do! printInputPrompt user
+                        match! FConsole.ReadLine () with
+                        | input when input.Trim().Length = 0 ->
+                            return ()
+                        | input when input.Trim().StartsWith "\pm@" ->
+                            let parts = (input.Trim().Split("@")[1]).Split ":"
+                            let toUser = parts[0].Trim()
+                            let msg = parts[1].Trim()
+                            do! clientSocket.Send
+                                <| PrivateMessageRequest (user, toUser, msg, DateTime.Now)
+                        | input when input.Trim().StartsWith "\online" ->
+                            do! clientSocket.Send
+                                <| OnlineClientsRequest (user, DateTime.Now)
+                        | input when input.Trim().StartsWith "\help" ->
+                            do! clientSocket.Send
+                                <| HelpRequest (user, DateTime.Now)
+                        | input ->
+                            do! clientSocket.Send
+                                <| BroadcastMessageRequest (user, input, DateTime.Now)
+                    with exn ->
+                        return! !- (Exception exn.Message)
             }
 
         let receive (clientSocket: FClientWebSocket<Message, Message, exn>) =
@@ -107,10 +105,13 @@ type ClientApp (serverUrl: string, user: string) =
         
             fio {
                 while true do
-                    let! msg = clientSocket.Receive ()
-                    do! clearInputPrompt ()
-                    do! handleMsg msg
-                    do! printInputPrompt user
+                    try
+                        let! msg = clientSocket.Receive ()
+                        do! clearInputPrompt ()
+                        do! handleMsg msg
+                        do! printInputPrompt user
+                    with exn ->
+                        return! !- (Exception exn.Message)
             }
 
         let connect (clientSocket: FClientWebSocket<Message, Message, exn>) =
@@ -129,10 +130,10 @@ type ClientApp (serverUrl: string, user: string) =
             }
 
         fio {
-            do! clearConsole ()
+            do! FConsole.Clear ()
             let! clientSocket = FClientWebSocket<Message, Message, exn>.Create options
             do! connect clientSocket
-            do! send clientSocket <~> receive clientSocket
+            do! receive clientSocket <~> send clientSocket
         }
 
     override _.effect =

@@ -3,23 +3,24 @@
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
 		<OutputType>Exe</OutputType>
+		<WarningsAsErrors>true</WarningsAsErrors>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="Collections.fs" />
 		<Compile Include="Printing.fs" />
 		<Compile Include="ServerApp.fs" />
 		<Compile Include="Program.fs" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="FSharp.FIO" Version="0.0.31-alpha" />
 		<PackageReference Include="BlackFox.ColoredPrintf" Version="2.0.0" />
-		<PackageReference Include="FSharp.FIO" Version="0.0.30-alpha" />
 		<PackageReference Include="FSharp.SystemTextJson" Version="1.4.36" />
+		<PackageReference Include="CircularBuffer" Version="1.4.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\FIOChat.Shared\FIOChat.Shared.fsproj" />
+		<ProjectReference Include="..\FIOChat.Common\FIOChat.Common.fsproj" />
 	</ItemGroup>
 
 </Project>

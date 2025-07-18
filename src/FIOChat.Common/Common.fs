@@ -1,4 +1,4 @@
-﻿module FIOChat.Shared
+﻿module FIOChat.Common
 
 open System
 

@@ -1,4 +1,4 @@
-﻿module FIOChat.ConsoleClient.Printing
+﻿module FIOChat.Client.Printing
 
 open FSharp.FIO.DSL
 open FSharp.FIO.Lib.IO
@@ -32,12 +32,9 @@ let printPrivateMsg user date msg =
 let printInputPrompt user =
     fio {
         let! date = formatDate DateTime.Now
-        return! !<< (fun () -> colorprintfn "$darkblue[[%s]$darkblue[\]] [$darkgreen[%s]]: " date user)
+        return! !<< (fun () -> colorprintf "$darkblue[[%s]$darkblue[\]] [$darkgreen[%s]]: " date user)
     }
 
 let clearInputPrompt () =
     let str = "\r" + new string(' ', 100) + "\r"
-    FConsole.PrintLine $"%s{str}"
-
-let clearConsole () =
-    !<< (fun () -> Console.Clear())
+    FConsole.Print $"%s{str}"

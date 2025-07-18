@@ -37,7 +37,7 @@ let printInputPrompt user =
 
 let clearInputPrompt () =
     let str = "\r" + new string(' ', 100) + "\r"
-    FConsole.PrintLine $"%s{str}"
+    FConsole.Print $"%s{str}"
 
 let clearConsole () =
     !<< (fun () -> Console.Clear())
