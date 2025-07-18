@@ -80,7 +80,7 @@ and ServerApp (serverUrl, serverName) =
                         do! broadcastMsg (Some bannedUser)
                             <| DisconnectionNotify (server.Name, bannedUser, clientMsg, date)
                         do! !<< (fun () -> clients.Remove bannedUser |> ignore)
-                        do! clientSocket.Close ()
+                        do! clientSocket.Abort ()
                     | false, _ -> 
                         do! printServerMsg date clientMsg
                         do! broadcastMsg (Some bannedUser)
@@ -298,9 +298,6 @@ and ServerApp (serverUrl, serverName) =
                     | KickedResponse (server, toUser, msg, date) ->
                         do! printServerMsg
                             <| $"Received a KickedResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{msg} and Timestamp: %s{date.ToShortDateString()}. Discarding."
-                    | BannedResponse (server, toUser, msg, date) ->
-                        do! printServerMsg
-                            <| $"Received a BannedResponse with Server: %s{server}, ToUser: %s{toUser}, Message: %s{msg} and Timestamp: %s{date.ToShortDateString()}. Discarding."
                 }
 
             let handleDisconnect clientEndPoint =
@@ -347,7 +344,7 @@ and ServerApp (serverUrl, serverName) =
             }
 
         fio {
-            do! clearConsole ()
+            do! FConsole.Clear ()
             let! serverSocket = FServerWebSocket<Message, Message, exn>.Create options
             let! server = !+ { Name = serverName; EndPoint = serverUrl; Socket = serverSocket }
             do! server.Socket.Start
@@ -360,5 +357,8 @@ and ServerApp (serverUrl, serverName) =
 
     override _.effect =
         fio {
-            do! run serverUrl
+            try
+                do! run serverUrl
+            with exn ->
+                return! !- (Exception exn.Message)
         }
